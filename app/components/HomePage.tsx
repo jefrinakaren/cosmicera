@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
+import type { DashboardTab } from './Dashboard'
 
-export default function HomePage({ onNavigate }: { onNavigate: (page: string) => void }) {
+export default function HomePage({ onNavigate }: { onNavigate: (page: string, tab?: DashboardTab) => void }) {
   const [stars, setStars] = useState<Array<{ x: number; y: number; size: number }>>([])
 
   useEffect(() => {
@@ -49,31 +50,25 @@ export default function HomePage({ onNavigate }: { onNavigate: (page: string) =>
           🌍 Where Do You Wanna Visit?
         </button>
 
-        {/* Feature Cards */}
+        {/* Feature Cards: each one opens its own dashboard tab */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl">
-          <div className="bg-slate-800/50 border border-cyan-500/30 p-6 rounded-lg hover:border-cyan-500 transition">
-            <div className="text-3xl mb-2">📡</div>
-            <h3 className="text-cyan-400 font-bold mb-2">Satellite Calendars</h3>
-            <p className="text-sm text-gray-400">MODIS, VIIRS & Harmonized views</p>
-          </div>
-          
-          <div className="bg-slate-800/50 border border-cyan-500/30 p-6 rounded-lg hover:border-cyan-500 transition">
-            <div className="text-3xl mb-2">🔥</div>
-            <h3 className="text-cyan-400 font-bold mb-2">Hotspot Map</h3>
-            <p className="text-sm text-gray-400">8 global regions with intensity data</p>
-          </div>
-          
-          <div className="bg-slate-800/50 border border-cyan-500/30 p-6 rounded-lg hover:border-cyan-500 transition">
-            <div className="text-3xl mb-2">🧲</div>
-            <h3 className="text-cyan-400 font-bold mb-2">Magnetic Field</h3>
-            <p className="text-sm text-gray-400">Kp Index & aurora forecast</p>
-          </div>
-          
-          <div className="bg-slate-800/50 border border-cyan-500/30 p-6 rounded-lg hover:border-cyan-500 transition">
-            <div className="text-3xl mb-2">🤖</div>
-            <h3 className="text-cyan-400 font-bold mb-2">AI Assistant</h3>
-            <p className="text-sm text-gray-400">Ask anything about Earth & space</p>
-          </div>
+          {([
+            { tab: 'calendar', icon: '📡', title: 'Satellite Calendars', text: 'MODIS, VIIRS & Harmonized views' },
+            { tab: 'map', icon: '🔥', title: 'Hotspot Map', text: '8 global regions with intensity data' },
+            { tab: 'magnetic', icon: '🧲', title: 'Magnetic Field', text: 'Kp Index & aurora forecast' },
+            { tab: 'ai', icon: '🤖', title: 'AI Assistant', text: 'Ask anything about Earth & space' }
+          ] as Array<{ tab: DashboardTab; icon: string; title: string; text: string }>).map((card) => (
+            <button
+              key={card.tab}
+              type="button"
+              onClick={() => onNavigate('dashboard', card.tab)}
+              className="bg-slate-800/50 border border-cyan-500/30 p-6 rounded-lg hover:border-cyan-500 hover:bg-slate-800 transition cursor-pointer text-center focus:outline-none focus:ring-2 focus:ring-cyan-400"
+            >
+              <div className="text-3xl mb-2">{card.icon}</div>
+              <h3 className="text-cyan-400 font-bold mb-2">{card.title}</h3>
+              <p className="text-sm text-gray-400">{card.text}</p>
+            </button>
+          ))}
         </div>
 
         {/* Footer */}

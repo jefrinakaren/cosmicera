@@ -5,8 +5,10 @@ import HotspotMap from './HotspotMap'
 import MagneticField from './MagneticField'
 import AIAssistant from './AIAssistant'
 
-export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'calendar' | 'map' | 'magnetic' | 'ai'>('calendar')
+export type DashboardTab = 'calendar' | 'map' | 'magnetic' | 'ai'
+
+export default function Dashboard({ initialTab = 'calendar' }: { initialTab?: DashboardTab }) {
+  const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 p-4 md:p-8">

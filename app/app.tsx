@@ -2,13 +2,16 @@
 import { useState } from 'react'
 import Navigation from './components/Navigation'
 import HomePage from './components/HomePage'
-import Dashboard from './components/Dashboard'
+import Dashboard, { DashboardTab } from './components/Dashboard'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<'home' | 'dashboard'>('home')
+  const [dashboardTab, setDashboardTab] = useState<DashboardTab>('calendar')
 
-  const handleNavigate = (page: string) => {
+  const handleNavigate = (page: string, tab?: DashboardTab) => {
     setCurrentPage(page as 'home' | 'dashboard')
+    // A feature card on the home page opens its own tab; the nav bar opens the first tab
+    setDashboardTab(tab ?? 'calendar')
   }
 
   return (
@@ -17,7 +20,7 @@ export default function App() {
       {currentPage === 'home' ? (
         <HomePage onNavigate={handleNavigate} />
       ) : (
-        <Dashboard />
+        <Dashboard initialTab={dashboardTab} />
       )}
     </main>
   )
