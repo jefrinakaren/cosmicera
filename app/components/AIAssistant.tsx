@@ -47,8 +47,16 @@ async function wikiLookup(query: string): Promise<{ title: string; text: string;
   const good = pages.filter((p) => p.extract && !/may refer to|disambiguation/i.test(p.extract))
   if (!good.length) return null
   const main = good[0]
+  // Several articles often share the same picture, so keep only different ones
+  const seen = new Set<string>()
   const photos: Photo[] = good
     .filter((p) => p.thumbnail?.source)
+    .filter((p) => {
+      const key = String(p.thumbnail.source).replace(/\/\d+px-[^/]+$/, '')
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
     .slice(0, 3)
     .map((p) => ({ src: p.thumbnail.source, title: p.title, url: p.fullurl }))
   return { title: main.title, text: main.extract.trim(), url: main.fullurl, photos }
