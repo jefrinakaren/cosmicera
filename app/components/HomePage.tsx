@@ -17,7 +17,7 @@ export default function HomePage({ onNavigate }: { onNavigate: (page: string, ta
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Starfield background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-blue-900">
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-violet-950">
         {stars.map((star, i) => (
           <div
             key={i}
@@ -45,7 +45,7 @@ export default function HomePage({ onNavigate }: { onNavigate: (page: string, ta
 
         <button
           onClick={() => onNavigate('dashboard')}
-          className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-4 px-8 rounded-lg text-xl mb-12 transition transform hover:scale-105"
+          className="bg-gradient-to-r from-cyan-500 to-violet-600 hover:from-cyan-600 hover:to-violet-700 text-white font-bold py-4 px-8 rounded-lg text-xl mb-12 transition transform hover:scale-105"
         >
           🌍 Where Do You Wanna Visit?
         </button>
@@ -54,8 +54,8 @@ export default function HomePage({ onNavigate }: { onNavigate: (page: string, ta
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl">
           {([
             { tab: 'calendar', icon: '📡', title: 'Satellite Calendars', text: 'MODIS, VIIRS & Harmonized views' },
-            { tab: 'map', icon: '🔥', title: 'Hotspot Map', text: '8 global regions with intensity data' },
-            { tab: 'magnetic', icon: '🧲', title: 'Magnetic Field', text: 'Kp Index & aurora forecast' },
+            { tab: 'map', icon: '🔥', title: 'Hotspot Map', text: 'Live NASA fire map + real photos' },
+            { tab: 'magnetic', icon: '🧲', title: 'Magnetic Field', text: 'Live NOAA space weather & animation' },
             { tab: 'ai', icon: '🤖', title: 'AI Assistant', text: 'Ask anything about Earth & space' }
           ] as Array<{ tab: DashboardTab; icon: string; title: string; text: string }>).map((card) => (
             <button

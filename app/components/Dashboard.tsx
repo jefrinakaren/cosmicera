@@ -44,7 +44,7 @@ export default function Dashboard({ initialTab = 'calendar' }: { initialTab?: Da
         </div>
 
         <p className="mt-4 text-xs text-gray-500 text-center">
-          ℹ️ Demo data: the numbers on this dashboard are simulated for learning. They are modelled on the kinds of measurements NASA MODIS / NOAA VIIRS satellites and NOAA space-weather stations provide.
+          ℹ️ Live data: the Hotspot Map (NASA GIBS satellite imagery) and Magnetic Field (NOAA Space Weather) tabs use real, daily-updating data. The Satellite Calendars are simulated for learning.
         </p>
       </div>
     </div>

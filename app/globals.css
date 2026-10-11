@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------------
+   THEME: "Aurora & Ember"
+   Change these numbers (R G B) to re-colour the whole app.
+   ------------------------------------------------------------------ */
+:root {
+  /* deep-space backgrounds */
+  --bg-900: 11 7 19;
+  --bg-800: 21 14 36;
+  --bg-700: 36 26 58;
+  --bg-600: 54 40 86;
+
+  /* main accent: aurora green */
+  --accent-300: 110 231 183;
+  --accent-400: 52 211 153;
+  --accent-500: 16 185 129;
+  --accent-600: 5 150 105;
+  --accent-700: 4 120 87;
+
+  /* second accent used in gradients: aurora violet */
+  --accent-2: 167 139 250;
+  /* fire colour used for hotspots */
+  --ember: 251 146 60;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -13,7 +37,7 @@ html {
 }
 
 body {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: linear-gradient(135deg, rgb(var(--bg-900)) 0%, rgb(var(--bg-800)) 100%);
   color: #e5e7eb;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
@@ -23,20 +47,20 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.1);
+  background: rgba(0,0,0,0.2);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #06b6d4;
+  background: rgb(var(--accent-500));
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #0891b2;
+  background: rgb(var(--accent-600));
 }
 
 .gradient-text {
-  background: linear-gradient(90deg, #06b6d4, #a855f7);
+  background: linear-gradient(90deg, rgb(var(--accent-400)), rgb(var(--accent-2)));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -50,17 +74,17 @@ table {
 th, td {
   padding: 12px;
   text-align: left;
-  border-bottom: 1px solid rgba(6, 182, 212, 0.1);
+  border-bottom: 1px solid rgb(var(--accent-500) / 0.12);
 }
 
 th {
-  background: rgba(6, 182, 212, 0.05);
+  background: rgb(var(--accent-500) / 0.06);
   font-weight: 600;
-  color: #06b6d4;
+  color: rgb(var(--accent-400));
 }
 
 tr:hover {
-  background: rgba(6, 182, 212, 0.05);
+  background: rgb(var(--accent-500) / 0.06);
 }
 
 button {
@@ -76,36 +100,96 @@ button:hover {
   50% { opacity: 0.5; }
 }
 
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(6, 182, 212, 0.5); }
-  50% { box-shadow: 0 0 40px rgba(6, 182, 212, 0.8); }
-}
-
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-.animate-glow {
-  animation: glow 2s ease-in-out infinite;
+/* "LIVE" dot */
+@keyframes live-dot {
+  0% { box-shadow: 0 0 0 0 rgb(var(--accent-400) / 0.7); }
+  70% { box-shadow: 0 0 0 8px rgb(var(--accent-400) / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(var(--accent-400) / 0); }
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: rgb(var(--accent-400));
+  animation: live-dot 1.8s infinite;
+}
+
+/* ------------------------------ Map (Leaflet) ------------------------------ */
+.map-wrap {
+  position: relative;
+  z-index: 0;
+  isolation: isolate; /* keeps the map below the sticky navigation bar */
+}
+
+.leaflet-container {
+  background: rgb(var(--bg-900));
+  font-family: inherit;
+  border-radius: 0.5rem;
+}
+
+/* Tailwind's base styles shrink every <img>; that breaks map tiles */
+.leaflet-container img,
+.leaflet-container .leaflet-tile {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.leaflet-container button:hover {
+  transform: none;
+}
+
+.leaflet-tooltip {
+  background: rgb(var(--bg-800));
+  border: 1px solid rgb(var(--accent-500) / 0.5);
+  color: #f3f4f6;
+  font-weight: 600;
+}
+
+.leaflet-tooltip-top:before {
+  border-top-color: rgb(var(--accent-500) / 0.5);
+}
+
+.leaflet-bar a {
+  background: rgb(var(--bg-700));
+  color: #f3f4f6;
+  border-bottom-color: rgb(var(--bg-600));
+}
+
+.leaflet-bar a:hover {
+  background: rgb(var(--bg-600));
+}
+
+.leaflet-control-attribution {
+  background: rgb(var(--bg-900) / 0.7) !important;
+  color: #9ca3af !important;
+  font-size: 10px;
+}
+
+.leaflet-control-attribution a {
+  color: rgb(var(--accent-300)) !important;
 }
 
 @media (max-width: 768px) {
   body {
     font-size: 14px;
   }
-  
+
   h1 {
     font-size: 24px;
   }
-  
+
   h2 {
     font-size: 20px;
   }
-  
+
   table {
     font-size: 12px;
   }
-  
+
   th, td {
     padding: 8px;
   }

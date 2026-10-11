@@ -1,108 +1,345 @@
 'use client'
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import 'leaflet/dist/leaflet.css'
+import { REGIONS, Region } from '../lib/regions'
+import { FIRE_LAYER, TRUE_COLOR_LAYER, fireActivity, latestDate, regionPhotoUrl, shiftDate } from '../lib/gibs'
+import { CommonsPhoto, fetchCommonsPhotos } from '../lib/commons'
 
-const HOTSPOTS_DATA = [
-  { country: 'Brazil', continent: 'S. America', intensity: 92, temp: 485, confidence: 95, lat: -10.5, lng: -55.5 },
-  { country: 'Australia', continent: 'Oceania', intensity: 87, temp: 465, confidence: 92, lat: -25.2, lng: 133.8 },
-  { country: 'Indonesia', continent: 'Asia', intensity: 78, temp: 445, confidence: 88, lat: -2.5, lng: 113.7 },
-  { country: 'DRC', continent: 'Africa', intensity: 82, temp: 455, confidence: 91, lat: -4.5, lng: 21.8 },
-  { country: 'Madagascar', continent: 'Africa', intensity: 71, temp: 420, confidence: 85, lat: -19.9, lng: 46.9 },
-  { country: 'Canada', continent: 'N. America', intensity: 88, temp: 470, confidence: 93, lat: 60.5, lng: -96.0 },
-  { country: 'Russia', continent: 'Europe', intensity: 79, temp: 450, confidence: 89, lat: 62.0, lng: 105.0 },
-  { country: 'India', continent: 'Asia', intensity: 65, temp: 410, confidence: 82, lat: 28.5, lng: 77.2 }
-]
+const GIBS = 'https://gibs.earthdata.nasa.gov'
+const MIN_DATE = '2024-02-01'
+
+function markerStyle(cover: number | null, selected: boolean) {
+  const base = cover === null ? '#9ca3af' : cover < 2 ? '#facc15' : cover < 6 ? '#fb923c' : '#ef4444'
+  return {
+    color: selected ? '#ffffff' : base,
+    weight: selected ? 3 : 2,
+    fillColor: base,
+    fillOpacity: 0.55,
+    radius: cover === null ? 9 : Math.min(26, 9 + Math.sqrt(cover) * 3.2),
+  }
+}
 
 export default function HotspotMap() {
-  const [selectedHotspot, setSelectedHotspot] = useState<typeof HOTSPOTS_DATA[0] | null>(null)
-  const [filteredContinent, setFilteredContinent] = useState<string>('all')
+  const mapDiv = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<any>(null)
+  const leafletRef = useRef<any>(null)
+  const dailyLayer = useRef<any>(null)
+  const fireLayer = useRef<any>(null)
+  const markers = useRef<Record<string, any>>({})
 
-  const filtered = filteredContinent === 'all' ? HOTSPOTS_DATA : HOTSPOTS_DATA.filter(h => h.continent === filteredContinent)
-  const sorted = [...filtered].sort((a, b) => b.intensity - a.intensity)
+  const [date, setDate] = useState<string>(() => latestDate())
+  const [showFires, setShowFires] = useState(true)
+  const [continent, setContinent] = useState('all')
+  const [selected, setSelected] = useState<Region | null>(null)
+  const [cover, setCover] = useState<Record<string, number | null>>({})
+  const [loadingCover, setLoadingCover] = useState(true)
+  const [photos, setPhotos] = useState<Record<string, CommonsPhoto>>({})
+  const [photoError, setPhotoError] = useState(false)
 
-  const getIntensityColor = (intensity: number) => {
-    if (intensity < 50) return '#ef6461'
-    if (intensity < 75) return '#f97316'
-    return '#dc2626'
-  }
+  const newest = latestDate()
+  const continents = useMemo(() => ['all', ...Array.from(new Set(REGIONS.map((r) => r.continent)))], [])
+  const visible = useMemo(() => REGIONS.filter((r) => continent === 'all' || r.continent === continent), [continent])
+  const ranked = useMemo(
+    () => [...visible].sort((a, b) => (cover[b.country] ?? -1) - (cover[a.country] ?? -1)),
+    [visible, cover]
+  )
 
-  const continents = ['all', ...Array.from(new Set(HOTSPOTS_DATA.map(h => h.continent)))]
+  const selectRegion = useCallback((region: Region | null) => {
+    setSelected(region)
+    if (region && mapRef.current) mapRef.current.flyTo([region.lat, region.lng], region.zoom, { duration: 1.2 })
+  }, [])
+
+  // 1. Build the map once
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const L = await import('leaflet')
+      if (cancelled || !mapDiv.current || mapRef.current) return
+      leafletRef.current = L
+
+      const map = L.map(mapDiv.current, {
+        center: [15, 10],
+        zoom: 2,
+        minZoom: 2,
+        maxZoom: 9,
+        worldCopyJump: true,
+        zoomSnap: 0.5,
+      })
+      mapRef.current = map
+
+      // Base: NASA Blue Marble (always available), then today's real satellite photo on top
+      L.tileLayer(`${GIBS}/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg`, {
+        maxNativeZoom: 8,
+        attribution: 'Imagery: NASA GIBS / Blue Marble',
+      }).addTo(map)
+
+      dailyLayer.current = L.tileLayer(
+        `${GIBS}/wmts/epsg3857/best/${TRUE_COLOR_LAYER}/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`,
+        { maxNativeZoom: 9, attribution: 'NASA GIBS / VIIRS satellite photo' }
+      ).addTo(map)
+
+      // Real fire detections, drawn by NASA's server
+      fireLayer.current = (L.tileLayer as any)
+        .wms(`${GIBS}/wms/epsg3857/best/wms.cgi`, {
+          layers: FIRE_LAYER,
+          format: 'image/png',
+          transparent: true,
+          version: '1.3.0',
+          TIME: date,
+          attribution: 'Fires: NASA VIIRS / FIRMS',
+        })
+        .addTo(map)
+
+      REGIONS.forEach((region) => {
+        const m = L.circleMarker([region.lat, region.lng], markerStyle(null, false)).addTo(map)
+        m.bindTooltip(region.country, { direction: 'top' })
+        m.on('click', () => selectRegion(region))
+        markers.current[region.country] = m
+      })
+    })()
+    return () => {
+      cancelled = true
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 2. New date -> new satellite photo, new fire detections, new fire activity numbers
+  useEffect(() => {
+    if (dailyLayer.current) {
+      dailyLayer.current.setUrl(
+        `${GIBS}/wmts/epsg3857/best/${TRUE_COLOR_LAYER}/default/${date}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`
+      )
+    }
+    if (fireLayer.current) fireLayer.current.setParams({ TIME: date })
+
+    let stale = false
+    setLoadingCover(true)
+    ;(async () => {
+      const result: Record<string, number | null> = {}
+      for (let i = 0; i < REGIONS.length; i += 4) {
+        const batch = REGIONS.slice(i, i + 4)
+        const values = await Promise.all(batch.map((r) => fireActivity(r.lat, r.lng, date)))
+        batch.forEach((r, k) => (result[r.country] = values[k]))
+        if (stale) return
+      }
+      if (!stale) {
+        setCover(result)
+        setLoadingCover(false)
+      }
+    })()
+    return () => {
+      stale = true
+    }
+  }, [date])
+
+  // 3. Fires on/off
+  useEffect(() => {
+    const map = mapRef.current
+    const layer = fireLayer.current
+    if (!map || !layer) return
+    if (showFires) layer.addTo(map)
+    else map.removeLayer(layer)
+  }, [showFires])
+
+  // 4. Re-colour and filter the markers
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    REGIONS.forEach((region) => {
+      const m = markers.current[region.country]
+      if (!m) return
+      m.setStyle(markerStyle(cover[region.country] ?? null, selected?.country === region.country))
+      m.setRadius(markerStyle(cover[region.country] ?? null, false).radius)
+      const show = continent === 'all' || region.continent === continent
+      if (show && !map.hasLayer(m)) m.addTo(map)
+      if (!show && map.hasLayer(m)) map.removeLayer(m)
+    })
+  }, [cover, selected, continent])
+
+  // 5. Real photographs (one request for all eight)
+  useEffect(() => {
+    fetchCommonsPhotos(REGIONS.map((r) => r.photoTitle))
+      .then(setPhotos)
+      .catch(() => setPhotoError(true))
+  }, [])
+
+  const photo = selected ? photos[selected.photoTitle.replace(/_/g, ' ')] : undefined
+  const maxCover = Math.max(1, ...Object.values(cover).map((v) => v ?? 0))
 
   return (
     <div className="space-y-6">
-      {/* Continent Filter */}
+      {/* Intro + live badge */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-cyan-400">Where is the Earth burning?</h2>
+          <p className="text-sm text-gray-400">
+            Red dots on the map are fires that NASA satellites detected on the chosen day. Click a country to zoom in.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-300 bg-slate-700/60 rounded-full px-3 py-1 self-start">
+          <span className="live-dot" />
+          Live NASA data · {date}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={() => setDate(shiftDate(date, -1))} disabled={date <= MIN_DATE} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-sm disabled:opacity-40">
+          ← Day before
+        </button>
+        <input
+          type="date"
+          value={date}
+          min={MIN_DATE}
+          max={newest}
+          onChange={(e) => e.target.value && setDate(e.target.value > newest ? newest : e.target.value)}
+          className="px-3 py-1 rounded bg-slate-700 text-white text-sm border border-cyan-500/30"
+          aria-label="Choose a date"
+        />
+        <button onClick={() => setDate(shiftDate(date, 1))} disabled={date >= newest} className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 text-sm disabled:opacity-40">
+          Day after →
+        </button>
+        <button onClick={() => setDate(newest)} disabled={date === newest} className="px-3 py-1 rounded bg-cyan-600 hover:bg-cyan-700 text-white text-sm disabled:opacity-40">
+          Latest
+        </button>
+        <label className="flex items-center gap-2 text-sm text-gray-300 ml-auto cursor-pointer">
+          <input type="checkbox" checked={showFires} onChange={(e) => setShowFires(e.target.checked)} />
+          Show NASA fire detections
+        </label>
+      </div>
+
+      {/* The map */}
+      <div className="map-wrap rounded-lg overflow-hidden border border-cyan-500/30">
+        <div ref={mapDiv} style={{ height: 460 }} role="application" aria-label="Interactive map of fire detections" />
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-400">
+        <span><span className="inline-block w-3 h-3 rounded-full align-middle mr-1" style={{ background: '#facc15' }} />Few fires</span>
+        <span><span className="inline-block w-3 h-3 rounded-full align-middle mr-1" style={{ background: '#fb923c' }} />Many fires</span>
+        <span><span className="inline-block w-3 h-3 rounded-full align-middle mr-1" style={{ background: '#ef4444' }} />Very many fires</span>
+        <span>Circle size = how much of the region has fires today. Small red squares = individual fires (zoom in to see them).</span>
+      </div>
+
+      {/* Continent filter */}
       <div className="flex gap-2 flex-wrap">
-        {continents.map(continent => (
+        {continents.map((c) => (
           <button
-            key={continent}
-            onClick={() => setFilteredContinent(continent)}
-            className={`px-3 py-1 rounded text-sm ${filteredContinent === continent ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-gray-300'}`}
+            key={c}
+            onClick={() => setContinent(c)}
+            className={`px-3 py-1 rounded text-sm ${continent === c ? 'bg-cyan-500 text-white' : 'bg-slate-700 text-gray-300'}`}
           >
-            {continent === 'all' ? 'All Regions' : continent}
+            {c === 'all' ? 'All regions' : c}
           </button>
         ))}
       </div>
 
-      {/* Hotspot Details */}
-      {selectedHotspot && (
-        <div className="bg-slate-700/50 p-4 rounded border border-cyan-500/30">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-xl font-bold text-cyan-400">{selectedHotspot.country}</h3>
-            <button onClick={() => setSelectedHotspot(null)} className="text-gray-400 hover:text-white">✕</button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Selected region: real photo + satellite photo */}
+      {selected && (
+        <div className="bg-slate-700/50 p-4 rounded-lg border border-cyan-500/30 space-y-4">
+          <div className="flex justify-between items-start">
             <div>
-              <p className="text-sm text-gray-400">📊 Intensity: <span className="text-red-400 font-bold">{selectedHotspot.intensity}%</span></p>
-              <p className="text-sm text-gray-400">🌡️ Temperature: <span className="text-orange-400 font-bold">{selectedHotspot.temp}K</span></p>
-              <p className="text-sm text-gray-400">✓ Confidence: <span className="text-green-400 font-bold">{selectedHotspot.confidence}%</span></p>
-              <p className="text-sm text-gray-400">📍 Location: <span className="text-cyan-400 font-bold">{selectedHotspot.lat}°, {selectedHotspot.lng}°</span></p>
+              <h3 className="text-2xl font-bold text-cyan-400">{selected.country}</h3>
+              <p className="text-sm text-gray-400">
+                📍 {selected.lat}°, {selected.lng}° · 🗓️ Fire season: {selected.season}
+              </p>
             </div>
-            <div className="flex justify-center">
-              <div className="h-32 w-32 rounded bg-slate-600 flex items-center justify-center text-5xl" aria-label={`Fire hotspot in ${selectedHotspot.country}`}>🔥</div>
-            </div>
+            <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-white text-xl leading-none" aria-label="Close">✕</button>
+          </div>
+
+          <p className="text-gray-200">{selected.why}</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <figure className="bg-slate-800 rounded-lg overflow-hidden">
+              <div className="aspect-[3/2] bg-slate-900 flex items-center justify-center">
+                {photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo.url} alt={`Fire in ${selected.country}`} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-sm text-gray-500 px-4 text-center">{photoError ? 'Photo could not be loaded' : 'Loading photo…'}</span>
+                )}
+              </div>
+              <figcaption className="p-3 text-xs text-gray-400">
+                <strong className="text-gray-200">📷 Real photo of fire in {selected.country}.</strong>
+                {photo && (
+                  <>
+                    {' '}By {photo.artist} · {photo.license} ·{' '}
+                    <a href={photo.page} target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline">Wikimedia Commons</a>
+                  </>
+                )}
+              </figcaption>
+            </figure>
+
+            <figure className="bg-slate-800 rounded-lg overflow-hidden">
+              <div className="aspect-[3/2] bg-slate-900">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={regionPhotoUrl(selected.lat, selected.lng, date)}
+                  alt={`NASA satellite photo of ${selected.country} on ${date} with fires marked`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <figcaption className="p-3 text-xs text-gray-400">
+                <strong className="text-gray-200">🛰️ From space on {date}.</strong> NASA VIIRS satellite photo with fire detections marked in red. This picture changes every day.
+                {cover[selected.country] != null && (
+                  <> Fire activity: <strong className="text-orange-400">{cover[selected.country]!.toFixed(1)}%</strong></>
+                )}
+              </figcaption>
+            </figure>
           </div>
         </div>
       )}
 
-      {/* Data Table */}
+      {/* Ranking */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr>
+              <th>#</th>
               <th>Country</th>
               <th>Continent</th>
-              <th>Intensity</th>
-              <th>Temp (K)</th>
-              <th>Confidence</th>
+              <th className="min-w-[180px]">Fire activity on {date}</th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map((hotspot, idx) => (
-              <tr key={idx} onClick={() => setSelectedHotspot(hotspot)} className="cursor-pointer hover:bg-cyan-500/10">
-                <td>{hotspot.country}</td>
-                <td>{hotspot.continent}</td>
-                <td><span className="bg-red-600 px-2 py-1 rounded">{hotspot.intensity}%</span></td>
-                <td>{hotspot.temp}K</td>
-                <td>{hotspot.confidence}%</td>
-              </tr>
-            ))}
+            {ranked.map((region, i) => {
+              const value = cover[region.country]
+              return (
+                <tr key={region.country} onClick={() => selectRegion(region)} className="cursor-pointer hover:bg-cyan-500/10">
+                  <td>{i + 1}</td>
+                  <td className="font-semibold">{region.country}</td>
+                  <td>{region.continent}</td>
+                  <td>
+                    {value == null ? (
+                      <span className="text-gray-500">{loadingCover ? 'Measuring…' : 'No data'}</span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-slate-600 rounded overflow-hidden">
+                          <div className="h-2 rounded" style={{ width: `${Math.max(3, (value / maxCover) * 100)}%`, background: markerStyle(value, false).fillColor }} />
+                        </div>
+                        <span className="w-14 text-right tabular-nums">{value.toFixed(1)}%</span>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-slate-700/50 p-4 rounded text-center">
-          <div className="text-2xl font-bold text-cyan-400">{filtered.length}</div>
-          <div className="text-sm text-gray-400">Total Hotspots</div>
-        </div>
-        <div className="bg-slate-700/50 p-4 rounded text-center">
-          <div className="text-2xl font-bold text-orange-400">{Math.round(filtered.reduce((a, b) => a + b.intensity, 0) / filtered.length)}%</div>
-          <div className="text-sm text-gray-400">Avg Intensity</div>
-        </div>
-        <div className="bg-slate-700/50 p-4 rounded text-center">
-          <div className="text-2xl font-bold text-green-400">{Math.round(filtered.reduce((a, b) => a + b.confidence, 0) / filtered.length)}%</div>
-          <div className="text-sm text-gray-400">Avg Confidence</div>
-        </div>
+      <div className="bg-slate-700/40 p-4 rounded text-xs text-gray-400 space-y-1">
+        <p>
+          <strong className="text-gray-200">How is “fire activity” measured?</strong> For each country we take a 30° × 20° satellite view and ask NASA how much of it is marked with fire detections
+          (NOAA-21 VIIRS, 375 m). It is a fair way to compare regions on the same day, but it is not an official fire count.
+        </p>
+        <p>
+          Satellite data: NASA GIBS / FIRMS. Photos: Wikimedia Commons (each credited to its author). Fire detections for the most recent day can be incomplete.
+        </p>
       </div>
     </div>
   )
