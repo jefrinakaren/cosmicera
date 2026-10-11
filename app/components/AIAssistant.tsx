@@ -129,7 +129,7 @@ export default function AIAssistant() {
                   {msg.photos.map((ph, k) => (
                     <a key={k} href={ph.url} target="_blank" rel="noopener noreferrer" className="block">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={ph.src} alt={ph.title} loading="lazy" className="w-full h-24 object-cover rounded" />
+                      <img src={ph.src} alt={ph.title} className="w-full h-24 object-cover rounded" />
                       <span className="block text-[10px] text-gray-300 mt-1 truncate">{ph.title}</span>
                     </a>
                   ))}
