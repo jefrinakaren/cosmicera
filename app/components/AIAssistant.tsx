@@ -44,7 +44,12 @@ async function wikiLookup(query: string): Promise<{ title: string; text: string;
   if (!res.ok) return null
   const data = await res.json()
   const pages: any[] = Object.values(data?.query?.pages || {}).sort((a: any, b: any) => a.index - b.index)
-  const good = pages.filter((p) => p.extract && !/may refer to|disambiguation/i.test(p.extract))
+  const good = pages.filter((p, i) => {
+    if (!p.extract || /may refer to|disambiguation/i.test(p.extract)) return false
+    // Titles like "Milky Way (chocolate bar)" or "Black Hole (film)" are usually not what a student means
+    if (i > 0 && /\(.*(film|album|song|band|bar|novel|series|game|TV|magazine|company).*\)/i.test(p.title)) return false
+    return true
+  })
   if (!good.length) return null
   const main = good[0]
   // Several articles often share the same picture, so keep only different ones
