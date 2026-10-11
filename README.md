@@ -73,3 +73,19 @@ Inspiration for the simulated values (not yet connected live):
 ---
 
 **🌍 Monitoring Earth's Vital Signs - One Hotspot at a Time 🌍**
+
+## What's new (v2)
+
+- **Real interactive map** (Leaflet) with NASA GIBS satellite imagery and live VIIRS fire detections. Pick any date since Feb 2024.
+- **Real photos** of fire hotspots in 8 countries (Wikimedia Commons, credited) next to the NASA satellite snapshot of the same place.
+- **Live magnetic field data** from NOAA Space Weather: Kp index, solar wind speed, Bz, storm scale, aurora maps and Sun images that refresh automatically.
+- **Magnetosphere simulator**: an animated model of Earth's magnetic bubble being squeezed by the solar wind. Try the "Launch a solar storm" button. (Note: this is the *magnetic* field, not gravity.)
+- Satellite Calendars are still simulated demo data.
+
+## Change the colours
+
+All colours live in `app/globals.css` in the `:root` block (`--bg-*` for backgrounds, `--accent-*` for the main colour). Change the numbers (R G B) and the whole site updates.
+
+## Data sources
+
+NASA GIBS (gibs.earthdata.nasa.gov), NOAA SWPC (services.swpc.noaa.gov), Wikimedia Commons (photos, with licences shown in the app).
