@@ -34,13 +34,13 @@ export default function HomePage({ onNavigate }: { onNavigate: (page: string, ta
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 text-center">
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 pt-16 text-center">
         <h1 className="text-6xl md:text-8xl font-bold gradient-text mb-4">
           COSMIC ERA
         </h1>
         
         <p className="text-gray-400 mb-8 text-lg">
-          Earth Monitoring • Satellite Data • Magnetic Field Analysis
+          Earth Monitoring • Satellite Data • Natural Hazards • Magnetic Field
         </p>
 
         <button
@@ -51,17 +51,22 @@ export default function HomePage({ onNavigate }: { onNavigate: (page: string, ta
         </button>
 
         {/* Feature Cards: each one opens its own dashboard tab */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mb-16">
           {([
-            { tab: 'calendar', icon: '📡', title: 'Satellite Calendars', text: 'MODIS, VIIRS & Harmonized views' },
-            { tab: 'map', icon: '🔥', title: 'Hotspot Map', text: 'Live NASA fire map + real photos' },
-            { tab: 'magnetic', icon: '🧲', title: 'Magnetic Field', text: 'Live NOAA space weather & animation' },
-            { tab: 'ai', icon: '🤖', title: 'AI Assistant', text: 'Ask anything about Earth & space' }
-          ] as Array<{ tab: DashboardTab; icon: string; title: string; text: string }>).map((card) => (
+            { page: 'dashboard', tab: 'calendar', icon: '🛰️', title: 'Satellites', text: '25 years of MODIS & VIIRS history' },
+            { page: 'dashboard', tab: 'map', icon: '🔥', title: 'Hotspot Map', text: 'Live NASA fire map + real photos' },
+            { page: 'dashboard', tab: 'analysis', icon: '📊', title: 'Fire Analysis', text: 'Graphs, history & country comparisons' },
+            { page: 'dashboard', tab: 'explore', icon: '📍', title: 'Explore an Area', text: 'Draw, click or type any place' },
+            { page: 'dashboard', tab: 'disasters', icon: '🌋', title: 'Disaster Map', text: 'Floods, quakes, volcanoes & oil spills' },
+            { page: 'dashboard', tab: 'magnetic', icon: '🧲', title: 'Magnetic Field & Core', text: "Earth's layers + live space weather" },
+            { page: 'warnings', icon: '🚨', title: 'Early Warnings', text: 'Live alerts & warning systems' },
+            { page: 'report', icon: '📰', title: 'Daily Report', text: "Today's activity, refreshed daily" },
+            { page: 'dashboard', tab: 'ai', icon: '🤖', title: 'AI Assistant', text: 'Ask any science question' }
+          ] as Array<{ page: string; tab?: DashboardTab; icon: string; title: string; text: string }>).map((card) => (
             <button
-              key={card.tab}
+              key={card.title}
               type="button"
-              onClick={() => onNavigate('dashboard', card.tab)}
+              onClick={() => onNavigate(card.page, card.tab)}
               className="bg-slate-800/50 border border-cyan-500/30 p-6 rounded-lg hover:border-cyan-500 hover:bg-slate-800 transition cursor-pointer text-center focus:outline-none focus:ring-2 focus:ring-cyan-400"
             >
               <div className="text-3xl mb-2">{card.icon}</div>
@@ -72,7 +77,7 @@ export default function HomePage({ onNavigate }: { onNavigate: (page: string, ta
         </div>
 
         {/* Footer */}
-        <div className="absolute bottom-4 text-center text-gray-500 text-sm">
+        <div className="pb-6 text-center text-gray-500 text-sm">
           <p>🚀 NASA Space Apps Challenge 2026</p>
           <p>Team: Cosmic Era</p>
         </div>

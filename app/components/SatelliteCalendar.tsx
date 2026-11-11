@@ -26,6 +26,12 @@ export default function SatelliteCalendar() {
 
   return (
     <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-bold text-cyan-400">Practice calendar (simulated)</h3>
+        <p className="text-sm text-gray-400">
+          A pretend calendar for learning how fire calendars look. The numbers are made up. For real numbers, use the Fire Analysis and Explore an Area tabs.
+        </p>
+      </div>
       {/* Controls */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
         <div className="flex gap-2">

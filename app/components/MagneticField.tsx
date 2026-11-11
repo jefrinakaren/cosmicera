@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import MagnetosphereSim, { magnetopauseDistance } from './MagnetosphereSim'
+import EarthLayers from './EarthLayers'
 import { KpPoint, SolarWind, StormScale, fetchKpHistory, fetchSolarWind, fetchStormScale, liveImages } from '../lib/noaa'
 
 const kpHex = (kp: number) => (kp < 2 ? '#22c55e' : kp < 4 ? '#34d399' : kp < 5 ? '#facc15' : kp < 7 ? '#fb923c' : '#ef4444')
@@ -101,6 +102,9 @@ export default function MagneticField() {
 
   return (
     <div className="space-y-8">
+      {/* Where the field comes from: inside the Earth */}
+      <EarthLayers />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
