@@ -3,6 +3,12 @@
 
 export const TRUE_COLOR_LAYER = 'VIIRS_SNPP_CorrectedReflectance_TrueColor'
 export const FIRE_LAYER = 'VIIRS_NOAA21_Thermal_Anomalies_375m_All'
+/** MODIS on Terra: the longest consistent fire record (Nov 2000 – today). */
+export const MODIS_FIRE_LAYER = 'MODIS_Terra_Thermal_Anomalies_All'
+export const VIIRS_SNPP_FIRE_LAYER = 'VIIRS_SNPP_Thermal_Anomalies_375m_All'
+export const BLUE_MARBLE_LAYER = 'BlueMarble_ShadedRelief_Bathymetry'
+/** First day with MODIS fire data in NASA GIBS. */
+export const MODIS_START = '2000-11-01'
 
 // [south, west, north, east]
 export type Box = [number, number, number, number]
@@ -73,4 +79,83 @@ export function fireActivity(lat: number, lng: number, date: string): Promise<nu
     }
     img.src = wmsUrl(FIRE_LAYER, regionBox(lat, lng), 300, 200, 'image/png', date)
   })
+}
+
+/** Count the pixels marked as fire in a WMS image. Returns null if it cannot be loaded. */
+export function countFirePixels(url: string, timeoutMs = 45000): Promise<{ marked: number; total: number } | null> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    const timer = setTimeout(() => {
+      img.src = ''
+      resolve(null)
+    }, timeoutMs)
+    img.onload = () => {
+      clearTimeout(timer)
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return resolve(null)
+        ctx.drawImage(img, 0, 0)
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data
+        let marked = 0
+        for (let i = 3; i < data.length; i += 4) if (data[i] > 0) marked++
+        resolve({ marked, total: canvas.width * canvas.height })
+      } catch {
+        resolve(null)
+      }
+    }
+    img.onerror = () => {
+      clearTimeout(timer)
+      resolve(null)
+    }
+    img.src = url
+  })
+}
+
+/** Image size that keeps a box's shape (degrees are drawn square in EPSG:4326). */
+export function boxImageSize(box: Box, longSide = 400): [number, number] {
+  const [s, w, n, e] = box
+  const dLat = Math.max(0.1, n - s)
+  const dLng = Math.max(0.1, e - w)
+  if (dLng >= dLat) return [longSide, Math.max(20, Math.round((longSide * dLat) / dLng))]
+  return [Math.max(20, Math.round((longSide * dLng) / dLat)), longSide]
+}
+
+/** Fire activity (% of the box marked with fire) for any box, date and fire layer. */
+export async function fireActivityBox(box: Box, date: string, layer = FIRE_LAYER): Promise<number | null> {
+  const [w, h] = boxImageSize(box, 300)
+  const r = await countFirePixels(wmsUrl(layer, box, w, h, 'image/png', date))
+  return r ? (r.marked / r.total) * 100 : null
+}
+
+/** Satellite photo (true colour + fire dots) of any box. Uses MODIS colours before VIIRS existed. */
+export function boxPhotoUrl(box: Box, date: string, longSide = 640): string {
+  const [w, h] = boxImageSize(box, longSide)
+  const early = date < '2012-01-20'
+  const base = early ? 'MODIS_Terra_CorrectedReflectance_TrueColor' : TRUE_COLOR_LAYER
+  const fire = early ? MODIS_FIRE_LAYER : FIRE_LAYER
+  return wmsUrl(`${base},${fire}`, box, w, h, 'image/jpeg', date)
+}
+
+/** Whole-world fire count for a day (used by the Daily Report). */
+export async function worldFirePixels(date: string, layer: string): Promise<number | null> {
+  const r = await countFirePixels(wmsUrl(layer, [-90, -180, 90, 180], 2048, 1024, 'image/png', date), 60000)
+  return r ? r.marked : null
+}
+
+/** Run async jobs a few at a time (GIBS is happier with ~6 parallel requests). */
+export async function runLimited<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length)
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++
+      out[i] = await fn(items[i], i)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return out
 }
