@@ -66,10 +66,6 @@ export default function AreaExplorer() {
         maxNativeZoom: 8,
         attribution: 'NASA GIBS',
       }).addTo(map)
-      L.tileLayer(`${GIBS}/wmts/epsg3857/best/Reference_Features_15m/default/GoogleMapsCompatible_Level13/{z}/{y}/{x}.png`, {
-        maxNativeZoom: 9,
-        opacity: 0.6,
-      }).addTo(map)
 
       map.on('click', (e: any) => {
         if (modeRef.current !== 'point') return
@@ -312,6 +308,7 @@ export default function AreaExplorer() {
                 </p>
                 <p className="text-xs text-gray-500">
                   Share of the area marked with fire detections ({date >= '2024-02-01' ? 'VIIRS NOAA-21' : 'MODIS Terra'}). 0% = no fires seen (or clouds hid them).
+                  {date >= '2024-02-01' && ' VIIRS sees many more small fires than MODIS, so compare this number with other days, and use the MODIS numbers below to compare years.'}
                 </p>
               </div>
               {stats && (

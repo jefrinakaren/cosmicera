@@ -243,7 +243,7 @@ export function Heatmap({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="text-[10px] border-separate" style={{ borderSpacing: 2 }}>
+      <table className="text-[10px] border-separate !w-auto mx-auto" style={{ borderSpacing: 2 }}>
         <thead>
           <tr>
             <th className="!p-0 !bg-transparent" />

@@ -86,10 +86,6 @@ export default function DisasterMap() {
         maxNativeZoom: 8,
         attribution: 'NASA GIBS Blue Marble · USGS · NASA EONET · GDACS',
       }).addTo(map)
-      L.tileLayer(`${GIBS}/wmts/epsg3857/best/Reference_Features_15m/default/GoogleMapsCompatible_Level13/{z}/{y}/{x}.png`, {
-        maxNativeZoom: 9,
-        opacity: 0.5,
-      }).addTo(map)
       fireLayer.current = (L.tileLayer as any).wms(`${GIBS}/wms/epsg3857/best/wms.cgi`, {
         layers: FIRE_LAYER,
         format: 'image/png',

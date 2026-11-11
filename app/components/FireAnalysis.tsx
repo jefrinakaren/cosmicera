@@ -40,7 +40,9 @@ export default function FireAnalysis() {
   const yearly = useMemo(() => annual(place), [place])
   const season = useMemo(() => seasonality(place), [place])
   const heat = useMemo(() => monthly(place), [place])
-  const heatMax = useMemo(() => Math.max(...Object.values(heat).flat().filter((v): v is number => v !== null)), [heat])
+  const heatVals = useMemo(() => Object.values(heat).flat().filter((v): v is number => v !== null), [heat])
+  const heatMax = Math.max(...heatVals)
+  const heatMin = Math.min(...heatVals)
   const fullYearly = yearly.filter((y) => !y.partial && y.value !== null) as { year: number; value: number }[]
   const busiest = fullYearly.reduce((a, b) => (b.value > a.value ? b : a), fullYearly[0])
   const quietest = fullYearly.reduce((a, b) => (b.value < a.value ? b : a), fullYearly[0])
@@ -166,11 +168,11 @@ export default function FireAnalysis() {
         )}
       </Section>
 
-      <Section title={`🗓️ Which parts of the year see more fires? (${place})`} sub="Each square is one month of one year. Brighter = more fire.">
+      <Section title={`🗓️ Which parts of the year see more fires? (${place})`} sub="Each square is one month of one year. Brighter = more fire (dark = the quietest month in the table, white = the busiest).">
         <Heatmap
           rows={YEARS.map((y) => ({ label: String(y), values: heat[y] }))}
           cols={MONTH_NAMES}
-          color={(v) => rampBlend(FIRE_RAMP, heatMax ? v / heatMax : 0)}
+          color={(v) => rampBlend(FIRE_RAMP, heatMax > heatMin ? 0.08 + (0.92 * (v - heatMin)) / (heatMax - heatMin) : 0.5)}
           format={fmtIdx}
         />
         <RampLegend title="Fire index" ramp={FIRE_RAMP} smooth />
@@ -183,7 +185,7 @@ export default function FireAnalysis() {
           On average, <b>{MONTH_NAMES[peakMonth]}</b> is the busiest fire month for {place.toLowerCase() === 'world' ? 'the world' : place}, and{' '}
           <b>{MONTH_NAMES[lowMonth]}</b> is the quietest ({FULL_YEARS[0]}–{FULL_YEARS[FULL_YEARS.length - 1]} average).
           {place === 'World' &&
-            ' Worldwide the peak comes from the African savanna fires (north of the equator in December–February, south of it in June–September).'}
+            ' The August–September peak comes mostly from the savannas of southern Africa and the Amazon and Cerrado in South America. North of the equator, Africa burns most from December to February.'}
         </p>
       </Section>
 

@@ -11,6 +11,8 @@ import { BarChart } from './charts'
 
 type Loadable<T> = T | undefined | null // undefined = loading, null = failed
 
+const FULL_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
 function pct(a: number, b: number) {
   return Math.round(((a - b) / b) * 100)
 }
@@ -107,12 +109,16 @@ export default function DailyReport() {
     const s: string[] = []
     if (viirs && viirs.now !== null && viirs.weekAgo) {
       const d = pct(viirs.now, viirs.weekAgo)
-      s.push(`NASA's VIIRS satellite saw ${Math.abs(d) < 5 ? 'about the same amount of' : d > 0 ? `${d}% more` : `${-d}% less`} fire on Earth than a week earlier.`)
+      s.push(
+        Math.abs(d) < 5
+          ? "NASA's VIIRS satellite saw about as much fire on Earth as a week earlier."
+          : `NASA's VIIRS satellite saw ${d > 0 ? `${d}% more` : `${-d}% less`} fire on Earth than a week earlier.`
+      )
     }
     if (typeof modisNow === 'number' && thisMonthAvg) {
       const d = pct(modisNow, thisMonthAvg)
       s.push(
-        `Compared with a normal ${MONTH_NAMES[monthIdx]} since 2001 (MODIS), fire activity was ${Math.abs(d) < 10 ? 'close to normal' : d > 0 ? `${d}% above normal` : `${-d}% below normal`}.`
+        `Compared with a normal ${FULL_MONTHS[monthIdx]} since 2001 (MODIS), fire activity was ${Math.abs(d) < 10 ? 'close to normal' : d > 0 ? `${d}% above normal` : `${-d}% below normal`}.`
       )
     }
     if (regions && regions[0]?.value !== null && regions[0]) s.push(`Of our 8 hotspot regions, ${regions[0].country} had the most fire.`)
@@ -121,7 +127,9 @@ export default function DailyReport() {
     if (kp) s.push(`Earth's magnetic field is ${kp.last.kp >= 5 ? 'in a geomagnetic STORM' : kp.last.kp >= 4 ? 'active' : 'quiet'} (Kp ${kp.last.kp.toFixed(1)}).`)
     if (burned) {
       const d = pct(burned.value, burned.avg)
-      s.push(`So far in ${burned.cur}, fires have burned ${formatHa(burned.value)} worldwide, ${Math.abs(d)}% ${d >= 0 ? 'more' : 'less'} than the average up to the same week.`)
+      s.push(
+        `So far in ${burned.cur}, fires have burned ${formatHa(burned.value)} worldwide, ${Math.abs(d)}% ${d >= 0 ? 'more' : 'less'} than the average up to the same week (recent figures are early estimates and usually go up later).`
+      )
     }
     return s
   }, [viirs, modisNow, thisMonthAvg, monthIdx, regions, quakes, biggestQuake, alerts, redOrange.length, kp, burned])

@@ -138,14 +138,31 @@ export default function SatelliteHistory() {
           </label>
           <label className="flex items-center gap-2">
             Day
-            <input
-              type="date"
-              value={`2001-${monthDay}`}
-              min="2001-01-01"
-              max="2001-12-31"
-              onChange={(e) => e.target.value && setMonthDay(e.target.value.slice(5))}
-              className="bg-slate-700 rounded px-2 py-1 [color-scheme:dark]"
-            />
+            <select
+              value={Number(monthDay.slice(3))}
+              onChange={(e) => setMonthDay(`${monthDay.slice(0, 2)}-${String(e.target.value).padStart(2, '0')}`)}
+              className="bg-slate-700 rounded px-2 py-1"
+            >
+              {Array.from({ length: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][Number(monthDay.slice(0, 2)) - 1] }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+            <select
+              value={monthDay.slice(0, 2)}
+              onChange={(e) => {
+                const day = Math.min(Number(monthDay.slice(3)), [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][Number(e.target.value) - 1])
+                setMonthDay(`${e.target.value}-${String(day).padStart(2, '0')}`)
+              }}
+              className="bg-slate-700 rounded px-2 py-1"
+            >
+              {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((m, i) => (
+                <option key={m} value={String(i + 1).padStart(2, '0')}>
+                  {m}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="flex items-center gap-2">
             Zoom to

@@ -172,9 +172,20 @@ export default function EarthLayers() {
           </g>
 
           {/* Labels with depths */}
+          {/* Thin outer layers: labels outside the globe with pointer lines */}
           {[
-            { id: 'crust', y: cy - S + 8, text: 'Crust 0–35 km' },
-            { id: 'upper', y: cy - radius(360), text: 'Upper mantle' },
+            { id: 'crust', tx: 318, ty: 22, px: cx + S * 0.6, py: cy - S * 0.8, text: 'Crust 0–35 km' },
+            { id: 'upper', tx: 336, ty: 40, px: cx + (S - 8) * 0.68, py: cy - (S - 8) * 0.733, text: 'Upper mantle' },
+          ].map((t) => (
+            <g key={t.id} style={{ cursor: 'pointer' }} onClick={() => setSel(t.id)}>
+              <line x1={t.tx - 4} y1={t.ty - 4} x2={t.px} y2={t.py} stroke={sel === t.id ? '#ffffff' : '#9ca3af'} strokeWidth="1" />
+              <circle cx={t.px} cy={t.py} r="2.5" fill={sel === t.id ? '#ffffff' : '#9ca3af'} />
+              <text x={t.tx} y={t.ty} fontSize="11" fontWeight="700" fill={sel === t.id ? '#ffffff' : '#d1d5db'}>
+                {t.text}
+              </text>
+            </g>
+          ))}
+          {[
             { id: 'lower', y: cy - radius(1800), text: 'Lower mantle' },
             { id: 'outer', y: cy - radius(4000), text: 'Outer core ⚡ field starts here' },
             { id: 'inner', y: cy - radius(5700), text: 'Inner core' },
