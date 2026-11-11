@@ -89,3 +89,20 @@ All colours live in `app/globals.css` in the `:root` block (`--bg-*` for backgro
 ## Data sources
 
 NASA GIBS (gibs.earthdata.nasa.gov), NOAA SWPC (services.swpc.noaa.gov), Wikimedia Commons (photos, with licences shown in the app).
+
+## What's new (v3)
+
+- **Satellites tab:** the history of MODIS (2000 to about 2027) and VIIRS (2011 onwards), a side-by-side comparison, a resolution demo, and a "time machine" comparing fires on any day since 2001 with the same day this year.
+- **Fire Analysis tab:** graphs built from 25 years of MODIS fire maps (which year burned most, which months, which places), a two-region comparison, a two-country comparison (area burned, GWIS data for every country) and "this year vs previous years".
+- **Explore an Area tab:** click a point, draw a box or type latitude/longitude. You get a satellite photo, today's fire activity, the same days of the year in every year since 2001, and nearby disasters.
+- **Disaster Map tab:** live earthquakes (USGS), volcanoes, floods, storms and droughts (NASA EONET), disaster alerts (GDACS) and famous past events, including oil spills.
+- **Magnetic Field & Core tab:** an interactive cross-section of Earth's layers showing where the magnetic field is made (the liquid outer core).
+- **Early Warnings page:** live GDACS alerts, the warning systems scientists use for each hazard, and which disasters heat can and cannot cause.
+- **Daily Report page:** rebuilt from live data each time it opens. It covers today's fires compared with last week, last year and the 2001–2025 average, plus earthquakes, alerts and space weather, with a written summary.
+- **Colour guide:** every colour used on the maps is explained (event colours, the fire ramp, earthquake magnitude, Kp and alert levels).
+
+### The MODIS history file (`app/lib/modis-history.json`)
+Made by this project. On the 8th and 22nd of every month from January 2001 to October 2026, NASA's world map of MODIS Terra fire detections (GIBS layer `MODIS_Terra_Thermal_Anomalies_All`, 2048 × 1024 pixels) was downloaded, and the fire pixels were counted for the whole world, for the 8 hotspot regions and for every 10° × 10° square.
+
+### More data sources
+USGS Earthquake Hazards Program · NASA EONET · GDACS (UN / European Commission) · GWIS (European Commission JRC) via Our World in Data.
