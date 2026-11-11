@@ -109,11 +109,19 @@ export async function fetchGdacs(days: number): Promise<Hazard[]> {
   const to = new Date()
   const from = new Date(Date.now() - days * 86400000)
   const d = (x: Date) => x.toISOString().slice(0, 10)
-  const j = await getJson(
-    `https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?eventlist=EQ;TC;FL;VO;DR;WF&alertlevel=Green;Orange;Red&fromDate=${d(from)}&toDate=${d(to)}`,
-    25000
+  // GDACS returns at most 100 events per request, so ask for each type separately
+  const types = Object.keys(GDACS_KIND)
+  const results = await Promise.allSettled(
+    types.map((t) =>
+      getJson(
+        `https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?eventlist=${t}&alertlevel=Green;Orange;Red&fromDate=${d(from)}&toDate=${d(to)}`,
+        25000
+      )
+    )
   )
-  return (j.features || [])
+  if (results.every((r) => r.status === 'rejected')) throw new Error('GDACS unreachable')
+  const features = results.flatMap((r) => (r.status === 'fulfilled' ? r.value.features || [] : []))
+  return features
     .filter((f: any) => f.geometry?.type === 'Point')
     .map((f: any) => {
       const p = f.properties
